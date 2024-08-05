@@ -117,6 +117,7 @@ int read_pcm_data(snd_pcm_t *pcm_handle, snd_pcm_hw_params_t *params, const char
     rate = 8000; // Default rate, can be updated based on params
     int size = frames * CHANNELS * (SAMPLE_SIZE / 8);
     buffer = (char *)malloc(size);
+    int count = 0;
 
     fp = fopen(filename, "wb");
     if (!fp) {
@@ -126,9 +127,13 @@ int read_pcm_data(snd_pcm_t *pcm_handle, snd_pcm_hw_params_t *params, const char
 
     // Write the WAV header
     write_wav_header(fp, rate, CHANNELS, seconds * rate);
+    printf("frames is %d, buffer size is %d\n",frames,size);
 
     for (int i = 0; i < seconds * rate / frames; ++i) {
         rc = snd_pcm_readi(pcm_handle, buffer, frames);
+	for(int i=0;i<sizeof(buffer);i++)
+	printf("Buffer[%d]=0x%x\n",i,buffer[i]);
+	printf("Value= %d: %x\n",count,*buffer);
         if (rc == -EPIPE) {
             fprintf(stderr, "overrun occurred\n");
             snd_pcm_prepare(pcm_handle);
@@ -140,10 +145,13 @@ int read_pcm_data(snd_pcm_t *pcm_handle, snd_pcm_hw_params_t *params, const char
         fwrite(buffer, size, 1, fp);
         float rms = calculate_rms(buffer, frames, CHANNELS);
         float db = convert_to_db(rms);
+        printf("Current dB level: %d: %.2f dB\n",count, db);
+	count++;
     }
 
     fclose(fp);
     free(buffer);
     return 0;
 }
+
 
